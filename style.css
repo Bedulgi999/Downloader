@@ -19,8 +19,7 @@ body{
   overflow-x:hidden;
 }
 
-.bg-grid,
-.vignette{ pointer-events:none; }
+.bg-grid,.vignette{ pointer-events:none; }
 
 .bg-grid{
   position:fixed; inset:0;
@@ -39,9 +38,7 @@ body{
 
 .topbar{
   position:sticky; top:0; z-index:5;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
+  display:flex; align-items:center; justify-content:space-between;
   gap:16px;
   padding:18px 22px;
   background: rgba(7,9,18,0.55);
@@ -57,7 +54,6 @@ body{
   background: linear-gradient(135deg, rgba(121,255,240,0.22), rgba(170,120,255,0.22));
   border:1px solid rgba(255,255,255,0.12);
 }
-
 .brand-title{ font-weight:800; letter-spacing:0.2px; }
 .brand-sub{ font-size:12px; color:var(--muted); }
 
@@ -117,7 +113,7 @@ label{
   color:var(--muted);
   margin-bottom:8px;
 }
-input{
+input, select{
   width:100%;
   padding: 12px 12px;
   border-radius: 14px;
@@ -127,7 +123,7 @@ input{
   outline:none;
   transition: 160ms ease;
 }
-input:focus{
+input:focus, select:focus{
   border-color: rgba(121,255,240,0.40);
   box-shadow: 0 0 0 6px rgba(121,255,240,0.08);
 }
@@ -206,13 +202,25 @@ input:focus{
   font-size: 12px;
 }
 
+.code{
+  margin: 10px 0 0;
+  border-radius: 16px;
+  border:1px solid rgba(255,255,255,0.12);
+  background: rgba(0,0,0,0.38);
+  padding: 12px;
+  overflow:auto;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
 .log{
   margin-top: 10px;
   border-radius: 16px;
   border:1px solid rgba(255,255,255,0.12);
   background: rgba(0,0,0,0.40);
   padding: 12px;
-  height: 240px;
+  height: 220px;
   overflow:auto;
   font-family: var(--mono);
   font-size: 12px;

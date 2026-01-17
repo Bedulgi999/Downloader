@@ -3,16 +3,22 @@ const $ = (id) => document.getElementById(id);
 const el = {
   inputUrl: $("inputUrl"),
   inputFilename: $("inputFilename"),
+  hint: $("hint"),
+
   btnDownload: $("btnDownload"),
   btnOpen: $("btnOpen"),
-  btnHeadCheck: $("btnHeadCheck"),
   btnClear: $("btnClear"),
-  btnCopyLog: $("btnCopyLog"),
 
   progressFill: $("progressFill"),
   progressText: $("progressText"),
   sizeText: $("sizeText"),
 
+  selectMode: $("selectMode"),
+  inputOutDir: $("inputOutDir"),
+  cmdBox: $("cmdBox"),
+  btnCopyCmd: $("btnCopyCmd"),
+
+  btnCopyLog: $("btnCopyLog"),
   log: $("log"),
 };
 
@@ -44,10 +50,7 @@ function humanBytes(bytes) {
   const units = ["B", "KB", "MB", "GB", "TB"];
   let i = 0;
   let v = bytes;
-  while (v >= 1024 && i < units.length - 1) {
-    v /= 1024;
-    i++;
-  }
+  while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
   return `${v.toFixed(i === 0 ? 0 : 2)} ${units[i]}`;
 }
 
@@ -57,28 +60,6 @@ function safeFilename(name) {
     .replace(/[\\/:*?"<>|]+/g, "_")
     .replace(/\s+/g, " ")
     .slice(0, 120);
-}
-
-function guessFilenameFromUrl(url, fallbackExt = "") {
-  try {
-    const u = new URL(url);
-    const last = u.pathname.split("/").filter(Boolean).pop() || "download";
-    let base = last;
-    if (!/\.[a-z0-9]{1,6}$/i.test(base) && fallbackExt) base += `.${fallbackExt}`;
-    return base;
-  } catch {
-    return "download" + (fallbackExt ? `.${fallbackExt}` : "");
-  }
-}
-
-function extFromContentType(ct) {
-  const c = (ct || "").toLowerCase();
-  if (c.includes("audio/mpeg")) return "mp3";
-  if (c.includes("audio/wav")) return "wav";
-  if (c.includes("audio/ogg")) return "ogg";
-  if (c.includes("video/mp4")) return "mp4";
-  if (c.includes("video/webm")) return "webm";
-  return "";
 }
 
 function triggerSave(blob, filename) {
@@ -92,17 +73,65 @@ function triggerSave(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
-async function headCheck(url) {
+function isDirectFileUrl(url) {
+  // 확장자로 빠른 판별 (쿼리/해시 제거)
   try {
-    const res = await fetch(url, { method: "HEAD" });
-    const ok = res.ok;
-    const type = res.headers.get("content-type") || "";
-    const len = Number(res.headers.get("content-length") || "0");
-    log(`HEAD: ${ok ? "OK" : "FAIL"} | type=${type || "unknown"} | size=${humanBytes(len)}`, ok ? "ok" : "bad");
-    return { ok, type, len, status: res.status };
+    const u = new URL(url);
+    const path = u.pathname.toLowerCase();
+    return (
+      path.endsWith(".mp3") || path.endsWith(".mp4") || path.endsWith(".webm") ||
+      path.endsWith(".wav") || path.endsWith(".ogg") || path.endsWith(".m4a") ||
+      path.endsWith(".mov") || path.endsWith(".mkv") || path.endsWith(".aac")
+    );
   } catch {
-    log("HEAD 검사 실패 (CORS/서버에서 HEAD 차단/네트워크)", "warn");
-    return { ok: false, type: "", len: 0, status: 0 };
+    return false;
+  }
+}
+
+function buildYtDlpCommand(url, mode, outDir) {
+  const safeUrl = url?.trim() ? `"${url.trim()}"` : `"https://example.com/..."`;
+  const dir = outDir?.trim() ? outDir.trim() : "";
+  const outTpl = dir ? `"${dir}/%(title)s.%(ext)s"` : `"%(title)s.%(ext)s"`;
+
+  if (mode === "audio") {
+    return [
+      "pip install -U yt-dlp",
+      `yt-dlp -x --audio-format mp3 -o ${outTpl} ${safeUrl}`
+    ].join("\n");
+  }
+
+  if (mode === "video") {
+    return [
+      "pip install -U yt-dlp",
+      `yt-dlp -f "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/best" -o ${outTpl} ${safeUrl}`
+    ].join("\n");
+  }
+
+  return [
+    "pip install -U yt-dlp",
+    `yt-dlp -f "bv*+ba/best" -o ${outTpl} ${safeUrl}`
+  ].join("\n");
+}
+
+function refreshCmdAndHint() {
+  const url = el.inputUrl.value.trim();
+  const mode = el.selectMode.value;
+  const outDir = el.inputOutDir.value;
+
+  el.cmdBox.textContent = buildYtDlpCommand(url, mode, outDir);
+
+  if (!url) {
+    el.hint.textContent = "URL을 입력하면 자동으로 판별해줄게.";
+    el.btnDownload.disabled = true;
+    return;
+  }
+
+  if (isDirectFileUrl(url)) {
+    el.hint.textContent = "✅ 직접 파일 URL로 보임: 브라우저 다운로드 가능(단, 서버가 CORS 막으면 실패할 수 있음)";
+    el.btnDownload.disabled = false;
+  } else {
+    el.hint.textContent = "❌ 페이지 URL로 보임(유튜브/사이트 등): 브라우저 다운로드 불가 → 아래 yt-dlp 명령어 사용";
+    el.btnDownload.disabled = true; // CORS 에러 유발하는 fetch 시도 자체를 막음
   }
 }
 
@@ -127,11 +156,17 @@ async function downloadDirect(url, filenameHint) {
 
   const contentType = res.headers.get("content-type") || "";
   const total = Number(res.headers.get("content-length") || "0");
-  const fallbackExt = extFromContentType(contentType);
 
   let filename = safeFilename(filenameHint);
-  if (!filename) filename = guessFilenameFromUrl(url, fallbackExt);
-  if (!/\.[a-z0-9]{1,6}$/i.test(filename) && fallbackExt) filename += `.${fallbackExt}`;
+  if (!filename) filename = "download";
+  // 확장자 없으면 content-type 보고 최소한 붙여줌
+  if (!/\.[a-z0-9]{1,6}$/i.test(filename)) {
+    const ct = contentType.toLowerCase();
+    if (ct.includes("audio/mpeg")) filename += ".mp3";
+    else if (ct.includes("video/mp4")) filename += ".mp4";
+    else if (ct.includes("video/webm")) filename += ".webm";
+    else if (ct.includes("audio/wav")) filename += ".wav";
+  }
 
   const reader = res.body?.getReader?.();
   if (!reader) {
@@ -176,9 +211,22 @@ async function copyLog() {
   log("로그 복사 완료", "ok");
 }
 
+async function copyCmd() {
+  await navigator.clipboard.writeText(el.cmdBox.textContent || "");
+  log("명령어 복사 완료", "ok");
+}
+
 function init() {
   log("준비 완료", "ok");
   setProgress(0, "대기 중", "");
+
+  el.btnDownload.disabled = true;
+
+  el.inputUrl.addEventListener("input", refreshCmdAndHint);
+  el.selectMode.addEventListener("change", refreshCmdAndHint);
+  el.inputOutDir.addEventListener("input", refreshCmdAndHint);
+
+  refreshCmdAndHint();
 
   el.btnOpen.addEventListener("click", () => {
     const url = el.inputUrl.value.trim();
@@ -187,40 +235,44 @@ function init() {
     log("새 탭으로 열기", "info");
   });
 
-  el.btnHeadCheck.addEventListener("click", async () => {
-    const url = el.inputUrl.value.trim();
-    if (!url) return log("URL을 먼저 입력해줘", "warn");
-    await headCheck(url);
-  });
-
   el.btnClear.addEventListener("click", () => {
     el.inputUrl.value = "";
     el.inputFilename.value = "";
+    el.inputOutDir.value = "";
+    el.selectMode.value = "best";
     setProgress(0, "대기 중", "");
     log("초기화 완료", "info");
+    refreshCmdAndHint();
   });
 
   el.btnCopyLog.addEventListener("click", () => {
     copyLog().catch(() => log("로그 복사 실패(권한 문제)", "warn"));
   });
 
+  el.btnCopyCmd.addEventListener("click", () => {
+    copyCmd().catch(() => log("명령어 복사 실패(권한 문제)", "warn"));
+  });
+
   el.btnDownload.addEventListener("click", async () => {
     const url = el.inputUrl.value.trim();
     const filename = el.inputFilename.value.trim();
+
     if (!url) return log("URL을 먼저 입력해줘", "warn");
+    if (!isDirectFileUrl(url)) {
+      log("이 URL은 직접 파일 링크가 아니라서 브라우저 다운로드 불가. 아래 yt-dlp 명령어를 사용해줘.", "warn");
+      return;
+    }
 
     el.btnDownload.disabled = true;
-    el.btnHeadCheck.disabled = true;
 
     try {
-      await headCheck(url);
       await downloadDirect(url, filename);
     } catch {
       setProgress(0, "실패", "");
-      log("다운로드 실패: 직접 파일 링크인지 / CORS / 서버 차단 여부 확인", "bad");
+      log("다운로드 실패: 서버 CORS/권한/직접 파일 링크 여부 확인", "bad");
     } finally {
-      el.btnDownload.disabled = false;
-      el.btnHeadCheck.disabled = false;
+      // URL이 직접 파일일 때만 다시 활성화
+      el.btnDownload.disabled = !isDirectFileUrl(el.inputUrl.value.trim());
     }
   });
 }

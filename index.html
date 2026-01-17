@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>MP3/MP4 Downloader</title>
-
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="./style.css" />
 </head>
@@ -17,7 +16,7 @@
       <div class="logo">⬇️</div>
       <div>
         <div class="brand-title">MP3/MP4 Downloader</div>
-        <div class="brand-sub">직접 파일 링크(mp3/mp4/webm/wav 등) 다운로드</div>
+        <div class="brand-sub">직접 파일 URL은 브라우저로 다운로드, 유튜브/사이트 URL은 yt-dlp로</div>
       </div>
     </div>
 
@@ -30,36 +29,32 @@
     <section class="card">
       <h2>다운로드</h2>
       <p class="muted">
-        “직접 파일 URL”을 넣으면 브라우저가 파일을 받아서 저장해줘.<br/>
-        예: <code>https://.../video.mp4</code>, <code>https://.../music.mp3</code>
+        ✅ <b>직접 파일 URL</b> (mp3/mp4/webm/wav 등) → 브라우저 다운로드 가능<br/>
+        ❌ <b>유튜브/사이트 페이지 URL</b> → 브라우저에서 막힘(CORS/정책) → 아래 yt-dlp 사용
       </p>
 
       <div class="field">
-        <label>파일 URL</label>
-        <input id="inputUrl" type="url" placeholder="https://example.com/video.mp4" spellcheck="false" />
-        <div class="mini muted">유튜브/사이트 페이지 주소는 보통 안 됨(직접 파일 링크 필요).</div>
+        <label>URL</label>
+        <input id="inputUrl" type="url" placeholder="https://example.com/video.mp4 또는 https://youtu.be/..." spellcheck="false" />
+        <div id="hint" class="mini muted">URL을 입력하면 자동으로 판별해줄게.</div>
       </div>
 
       <div class="grid2">
         <div class="field">
           <label>저장 파일명(선택)</label>
-          <input id="inputFilename" type="text" placeholder="my_file (확장자 자동추정)" spellcheck="false" />
-          <div class="mini muted">비워두면 URL에서 자동 추출.</div>
+          <input id="inputFilename" type="text" placeholder="my_file" spellcheck="false" />
+          <div class="mini muted">직접 파일 URL일 때만 사용됨.</div>
         </div>
 
         <div class="field">
-          <label>옵션</label>
+          <label>버튼</label>
           <div class="row tight">
-            <button id="btnHeadCheck" class="btn">URL 검사(HEAD)</button>
+            <button id="btnDownload" class="btn primary">다운로드 시작</button>
+            <button id="btnOpen" class="btn">새 탭으로 열기</button>
             <button id="btnClear" class="btn ghost">초기화</button>
           </div>
-          <div class="mini muted">서버가 HEAD를 막으면 검사 실패할 수 있음.</div>
+          <div class="mini muted">유튜브 URL은 “다운로드 시작” 대신 yt-dlp 명령어를 사용해.</div>
         </div>
-      </div>
-
-      <div class="row">
-        <button id="btnDownload" class="btn primary">다운로드 시작</button>
-        <button id="btnOpen" class="btn">새 탭으로 열기</button>
       </div>
 
       <div class="progress">
@@ -70,6 +65,41 @@
           <span id="progressText" class="muted">대기 중</span>
           <span id="sizeText" class="muted"></span>
         </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>유튜브/사이트 URL용 (yt-dlp 명령어)</h2>
+      <p class="muted">
+        브라우저에서는 막히는 URL(유튜브 등)은 PC에서 yt-dlp로 받아야 해.<br/>
+        1) <code>pip install -U yt-dlp</code><br/>
+        2) 아래 명령어 붙여넣기 실행
+      </p>
+
+      <div class="grid2">
+        <div class="field">
+          <label>모드</label>
+          <select id="selectMode">
+            <option value="best">영상+음성 (best)</option>
+            <option value="video">영상만 (mp4 우선)</option>
+            <option value="audio">오디오만 (mp3)</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>저장 폴더(선택)</label>
+          <input id="inputOutDir" type="text" placeholder="downloads" spellcheck="false" />
+          <div class="mini muted">비우면 현재 폴더.</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>명령어</label>
+        <pre class="code"><code id="cmdBox">URL을 입력하면 여기 생성됨</code></pre>
+      </div>
+
+      <div class="row">
+        <button id="btnCopyCmd" class="btn primary">명령어 복사</button>
       </div>
     </section>
 
