@@ -34,6 +34,7 @@ const el = {
 };
 
 const LS_BGM_KEY = "bgm_url_v1";
+let bgmEnabled = true;
 
 function now() {
   const d = new Date();
@@ -100,14 +101,35 @@ async function copyToClipboard(text) {
   log("클립보드에 복사 완료", "ok");
 }
 
-// =======================================================
-// BGM (LINK BASED)
-// =======================================================
-let bgmEnabled = true;
-
+// ======================
+// BGM (link-based)
+// ======================
 function updateBgmChip() {
   el.btnBgmToggle.textContent = `BGM: ${bgmEnabled ? "ON" : "OFF"}`;
   el.btnBgmToggle.classList.toggle("off", !bgmEnabled);
+}
+
+function saveBgmUrl(url) {
+  localStorage.setItem(LS_BGM_KEY, url);
+}
+function loadBgmUrl() {
+  return localStorage.getItem(LS_BGM_KEY) || "";
+}
+
+function setBgmUrl(url) {
+  const u = (url || "").trim();
+  el.bgm.src = u;
+  el.bgm.load();
+
+  if (u) {
+    saveBgmUrl(u);
+    setStatus("링크 적용됨(재생 시도 가능)", "info");
+    log(`BGM 링크 적용: ${u}`, "info");
+  } else {
+    localStorage.removeItem(LS_BGM_KEY);
+    setStatus("BGM 링크 없음", "warn");
+    log("BGM 링크 초기화", "info");
+  }
 }
 
 function stopBgm() {
@@ -121,14 +143,12 @@ function stopBgm() {
 async function tryPlayBgm() {
   if (!bgmEnabled) return;
 
-  // src가 없으면 게이트 띄우고 안내
   if (!el.bgm.src) {
     setStatus("BGM 링크가 없음", "warn");
     el.gate.classList.remove("hidden");
     return;
   }
 
-  // autoplay 정책 때문에 실패하면 게이트 노출
   try {
     await el.bgm.play();
     el.gate.classList.add("hidden");
@@ -137,7 +157,7 @@ async function tryPlayBgm() {
   } catch {
     setStatus("자동 재생 차단(클릭 필요)", "warn");
     el.gate.classList.remove("hidden");
-    log("BGM 자동재생이 차단됨 — 버튼/클릭으로 시작해줘", "warn");
+    log("BGM 자동재생 차단 — 버튼/클릭으로 시작해줘", "warn");
   }
 }
 
@@ -155,10 +175,9 @@ async function forceStartBgm() {
     el.gate.classList.add("hidden");
     setStatus("재생 중", "ok");
     log("BGM 재생 시작(사용자 상호작용)", "ok");
-  } catch (e) {
-    // 여기서 실패하면 대부분 403/CORS/포맷 문제
+  } catch {
     setStatus("재생 실패(403/CORS/포맷)", "bad");
-    log("BGM 재생 실패: 링크가 403/CORS로 막혔거나 오디오 포맷 문제일 수 있어", "bad");
+    log("BGM 재생 실패: 403/CORS/포맷 문제일 수 있어(핫링크 차단)", "bad");
   }
 }
 
@@ -167,69 +186,42 @@ function toggleMute() {
   log(`음소거: ${el.bgm.muted ? "ON" : "OFF"}`, "info");
 }
 
-function saveBgmUrl(url) {
-  localStorage.setItem(LS_BGM_KEY, url);
-}
-
-function loadBgmUrl() {
-  return localStorage.getItem(LS_BGM_KEY) || "";
-}
-
-function setBgmUrl(url) {
-  const u = (url || "").trim();
-  el.bgm.src = u;
-  el.bgm.load();
-
-  if (u) {
-    saveBgmUrl(u);
-    setStatus("링크 적용됨(재생 시도 중...)", "info");
-    log(`BGM 링크 적용: ${u}`, "info");
-  } else {
-    localStorage.removeItem(LS_BGM_KEY);
-    setStatus("BGM 링크 없음", "warn");
-    log("BGM 링크 초기화", "info");
-  }
-}
-
 async function testBgmUrl(url) {
   const u = (url || "").trim();
   if (!u) {
     setStatus("테스트할 링크가 없음", "warn");
     return;
   }
-
-  // HEAD로 테스트(가능할 때만). CORS 때문에 여기서 실패해도 실제 재생은 될 수 있음.
   try {
     const res = await fetch(u, { method: "HEAD" });
     if (!res.ok) {
       setStatus(`HEAD 실패: HTTP ${res.status}`, "warn");
-      log(`BGM 링크 HEAD 실패: HTTP ${res.status} (재생도 막힐 가능성 큼)`, "warn");
+      log(`BGM HEAD 실패: HTTP ${res.status}`, "warn");
       return;
     }
     const ct = res.headers.get("content-type") || "";
-    setStatus(`HEAD OK (${ct || "content-type 없음"})`, "ok");
-    log(`BGM 링크 HEAD OK | type=${ct || "unknown"}`, "ok");
+    setStatus(`HEAD OK (${ct || "type 없음"})`, "ok");
+    log(`BGM HEAD OK | type=${ct || "unknown"}`, "ok");
   } catch {
     setStatus("HEAD 테스트 불가(CORS) — 재생으로 확인", "warn");
-    log("BGM 링크 HEAD 테스트 실패(CORS). 재생 시도로 확인해야 함", "warn");
+    log("BGM HEAD 테스트 실패(CORS). 재생 시도로 확인해야 함", "warn");
   }
 }
 
-// 오디오 이벤트로 403/에러 감지
 function bindBgmEvents() {
   el.bgm.addEventListener("playing", () => setStatus("재생 중", "ok"));
   el.bgm.addEventListener("pause", () => {
     if (bgmEnabled) setStatus("일시정지", "warn");
   });
   el.bgm.addEventListener("error", () => {
-    setStatus("로드 실패(403/CORS/링크 문제)", "bad");
-    log("BGM 로드 실패: 403(Forbidden) 또는 CORS/핫링크 차단 가능성이 큼", "bad");
+    setStatus("로드 실패(403/CORS/링크)", "bad");
+    log("BGM 로드 실패: 403(Forbidden) 또는 CORS/핫링크 차단 가능성 큼", "bad");
   });
 }
 
-// =======================================================
-// Browser Download (direct file URL)
-// =======================================================
+// ======================
+// Downloader (direct url)
+// ======================
 async function headCheck(url) {
   try {
     const res = await fetch(url, { method: "HEAD" });
@@ -323,9 +315,9 @@ function triggerSave(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
-// =======================================================
+// ======================
 // yt-dlp command builder
-// =======================================================
+// ======================
 function buildYtDlpCommand(url, mode, outDir) {
   const safeUrl = url?.trim() ? `"${url.trim()}"` : `"https://example.com/..."`;
   const dir = outDir?.trim() ? outDir.trim() : "";
@@ -356,40 +348,41 @@ function refreshCmd() {
   el.cmdBox.textContent = buildYtDlpCommand(url, mode, outDir);
 }
 
-// =======================================================
+// ======================
 // Init
-// =======================================================
+// ======================
 function init() {
   updateBgmChip();
   bindBgmEvents();
 
   log("페이지 로드됨", "info");
-  log("BGM은 링크 기반. 링크가 403/CORS로 막히면 재생 불가", "warn");
+  log("BGM: 링크 기반 (403/CORS로 막히면 재생 불가)", "warn");
 
-  // load saved BGM url
+  // load saved bgm url
   const saved = loadBgmUrl();
   if (saved) {
     el.inputBgmUrl.value = saved;
     setBgmUrl(saved);
-    setStatus("저장된 링크 로드됨(재생 시도는 클릭 필요할 수 있음)", "info");
+    setStatus("저장된 링크 로드됨", "info");
   } else {
     setStatus("BGM 링크 없음", "warn");
   }
 
-  // autoplay 정책 대응: 들어오면 재생 시도 -> 막히면 gate 표시
+  // autoplay attempt
   tryPlayBgm();
 
-  // 사용자 상호작용 발생하면 자동 재시도
+  // any user gesture -> try
   const unlock = () => {
     if (bgmEnabled) forceStartBgm();
   };
   window.addEventListener("pointerdown", unlock, { once: true });
   window.addEventListener("keydown", unlock, { once: true });
 
-  // BGM UI
+  // gate buttons
   el.btnStartBgm.addEventListener("click", forceStartBgm);
   el.btnMuteToggle.addEventListener("click", toggleMute);
 
+  // top controls
   el.btnBgmToggle.addEventListener("click", () => {
     bgmEnabled = !bgmEnabled;
     updateBgmChip();
@@ -403,10 +396,17 @@ function init() {
     }
   });
 
+  el.btnCopyLog.addEventListener("click", async () => {
+    const lines = [...el.log.querySelectorAll(".logline")]
+      .map((x) => x.textContent)
+      .join("\n");
+    await copyToClipboard(lines || "(로그 없음)");
+  });
+
+  // bgm link controls
   el.btnApplyBgm.addEventListener("click", () => {
     const url = el.inputBgmUrl.value.trim();
     setBgmUrl(url);
-    // 적용하면 바로 재생은 시도 (막히면 gate)
     tryPlayBgm();
   });
 
@@ -421,15 +421,7 @@ function init() {
     el.gate.classList.add("hidden");
   });
 
-  // log copy
-  el.btnCopyLog.addEventListener("click", async () => {
-    const lines = [...el.log.querySelectorAll(".logline")]
-      .map((x) => x.textContent)
-      .join("\n");
-    await copyToClipboard(lines || "(로그 없음)");
-  });
-
-  // cmd
+  // yt-dlp cmd
   refreshCmd();
   el.inputUrl.addEventListener("input", refreshCmd);
   el.selectMode.addEventListener("change", refreshCmd);
@@ -440,7 +432,7 @@ function init() {
   });
 
   el.btnExplain.addEventListener("click", () => {
-    log("yt-dlp는 사이트 정책이 허용하는 범위 내에서 사용해야 해. 권한 있는 콘텐츠만 다운로드해줘.", "warn");
+    log("yt-dlp는 사이트 정책이 허용하는 범위 내에서 사용. 권한 있는 콘텐츠만 다운로드해줘.", "warn");
   });
 
   // downloader

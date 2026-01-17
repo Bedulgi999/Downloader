@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Media Downloader + BGM</title>
+  <title>Downloader + Link BGM</title>
 
   <!-- favicon 404 방지 -->
   <link rel="icon" href="data:,">
@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
+  <!-- Background FX -->
   <div class="bg-grid"></div>
   <div class="vignette"></div>
 
@@ -22,8 +23,12 @@
         브라우저 정책 때문에 첫 상호작용이 필요해.<br/>
         아래 버튼을 눌러서 BGM을 시작할 수 있어.
       </p>
-      <button id="btnStartBgm" class="btn primary">음악 시작</button>
-      <button id="btnMuteToggle" class="btn ghost">음소거</button>
+
+      <div class="row">
+        <button id="btnStartBgm" class="btn primary">음악 시작</button>
+        <button id="btnMuteToggle" class="btn ghost">음소거</button>
+      </div>
+
       <div class="gate-hint">Tip: 아무 곳이나 클릭/키 입력해도 자동으로 재생 시도함</div>
     </div>
   </div>
@@ -32,8 +37,8 @@
     <div class="brand">
       <div class="logo">⬇️</div>
       <div>
-        <div class="brand-title">Media Downloader</div>
-        <div class="brand-sub">브라우저 다운로드 + Python(yt-dlp) 명령어 생성 + 링크 BGM</div>
+        <div class="brand-title">Downloader</div>
+        <div class="brand-sub">브라우저 다운로드 + yt-dlp 명령어 + 링크 BGM</div>
       </div>
     </div>
 
@@ -47,15 +52,15 @@
     <section class="card">
       <h2>0) BGM 링크 설정</h2>
       <p class="muted">
-        mp3/ogg/wav 같은 오디오 “직접 링크”를 넣어줘. (403/CORS 차단된 링크는 재생이 안 될 수 있음)<br/>
-        넣어둔 링크는 저장돼서 다음에 들어와도 자동으로 재생 시도해.
+        mp3/ogg/wav 같은 오디오 “직접 링크”를 넣어줘. (403/CORS 차단된 링크는 재생이 안 됨)<br/>
+        링크는 저장돼서 다음에 들어와도 자동으로 재생 시도해.
       </p>
 
       <div class="grid2">
         <div class="field">
           <label>BGM URL</label>
           <input id="inputBgmUrl" type="url" placeholder="https://example.com/bgm.mp3" spellcheck="false" />
-          <div class="mini muted">예: S3/R2/본인 서버/허용된 CDN 링크</div>
+          <div class="mini muted">추천: 본인 S3/R2/서버에 올린 mp3 직링크</div>
         </div>
 
         <div class="field">
@@ -67,15 +72,15 @@
 
       <div class="row">
         <button id="btnApplyBgm" class="btn primary">이 링크로 BGM 적용</button>
-        <button id="btnTestBgm" class="btn">링크 테스트</button>
+        <button id="btnTestBgm" class="btn">링크 테스트(HEAD)</button>
         <button id="btnClearBgm" class="btn ghost">BGM 링크 초기화</button>
       </div>
 
       <details class="details">
-        <summary>링크가 자꾸 403/CORS 나면?</summary>
+        <summary>자꾸 403/CORS면?</summary>
         <div class="muted">
-          그 링크 제공자가 “외부 사이트에서 직접 재생”을 막는 거야.<br/>
-          해결: 네가 소유한 저장소(S3/R2 등)에 올리고 CORS 허용하거나, 핫링크 허용된 CDN을 사용해야 해.
+          링크 제공자가 외부 사이트 재생(핫링크)을 막는 거야.<br/>
+          해결: 네가 소유한 저장소(S3/R2 등)에 업로드하고 CORS/핫링크 허용된 링크를 써야 해.
         </div>
       </details>
     </section>
@@ -84,7 +89,7 @@
       <h2>1) 브라우저로 파일 다운로드 (직접 파일 URL)</h2>
       <p class="muted">
         mp3/mp4/webm/wav 같은 “직접 파일 링크”를 넣으면 브라우저가 받아서 저장해줘.<br/>
-        유튜브/트위치 같은 서비스 URL은 보통 브라우저에서 바로 다운로드가 막혀있어(정책/CORS).
+        유튜브/트위치 같은 서비스 URL은 브라우저에서 직접 다운로드가 막혀 있는 경우가 많아.
       </p>
 
       <div class="grid2">
@@ -103,7 +108,7 @@
 
       <div class="row">
         <button id="btnDownload" class="btn primary">다운로드 시작</button>
-        <button id="btnHeadCheck" class="btn">URL 검사(가능하면)</button>
+        <button id="btnHeadCheck" class="btn">URL 검사(HEAD)</button>
         <button id="btnClear" class="btn ghost">초기화</button>
       </div>
 
@@ -121,7 +126,7 @@
     <section class="card">
       <h2>2) 파이썬(yt-dlp) 다운로드 명령어 자동 생성</h2>
       <p class="muted">
-        아래 명령어는 네 PC에서 실행하는 방식이야. (유튜브/각종 사이트는 보통 이 방법이 안정적)<br/>
+        아래 명령어는 네 PC에서 실행하는 방식이야.<br/>
         먼저: <code>pip install -U yt-dlp</code>
       </p>
 
@@ -159,7 +164,7 @@
     </section>
   </main>
 
-  <!-- BGM Player (link-based) -->
+  <!-- Link-based BGM player -->
   <audio id="bgm" preload="auto" loop crossorigin="anonymous"></audio>
 
   <script src="./app.js"></script>
