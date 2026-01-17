@@ -1,14 +1,3 @@
-// ============================
-// Config
-// ============================
-
-// 기본 BGM (원하는 mp3 URL로 바꿔도 됨)
-const BACKGROUND_MUSIC_URL =
-  "https://cdn.pixabay.com/download/audio/2022/03/15/audio_2f6a3ab8f9.mp3?filename=future-bass-beat-117997.mp3";
-
-// ============================
-// Helpers
-// ============================
 const $ = (id) => document.getElementById(id);
 
 const el = {
@@ -35,7 +24,6 @@ const el = {
   btnExplain: $("btnExplain"),
 
   log: $("log"),
-  bgm: $("bgm"),
 };
 
 function now() {
@@ -98,68 +86,135 @@ async function copyToClipboard(text) {
   log("클립보드에 복사 완료", "ok");
 }
 
-// ============================
-// BGM (Autoplay-safe)
-// ============================
+// =======================================================
+// ✅ WebAudio BGM (외부 mp3 없음 → 403/CORS 없음)
+// =======================================================
 let bgmEnabled = true;
+let isMuted = false;
+
+let audioCtx = null;
+let master = null;
+let clockTimer = null;
+let step = 0;
 
 function updateBgmChip() {
   el.btnBgmToggle.textContent = `BGM: ${bgmEnabled ? "ON" : "OFF"}`;
   el.btnBgmToggle.classList.toggle("off", !bgmEnabled);
 }
 
-async function tryPlayBgm() {
-  if (!bgmEnabled) return;
-
-  try {
-    el.bgm.muted = false;
-    await el.bgm.play();
-    log("BGM 재생 시작", "ok");
-    el.gate.classList.add("hidden");
-  } catch {
-    try {
-      el.bgm.muted = true;
-      await el.bgm.play();
-      log("BGM 자동재생(음소거) 성공 — 클릭하면 소리 켜짐", "warn");
-      el.gate.classList.remove("hidden");
-    } catch {
-      log("BGM 자동재생 차단 — 버튼을 눌러 시작해줘", "warn");
-      el.gate.classList.remove("hidden");
-    }
-  }
+function setMuteState(mute) {
+  isMuted = !!mute;
+  if (master) master.gain.value = isMuted ? 0 : 0.22;
+  log(`음소거: ${isMuted ? "ON" : "OFF"}`, "info");
 }
 
-function stopBgm() {
-  el.bgm.pause();
-  el.bgm.currentTime = 0;
+function ensureAudio() {
+  if (audioCtx) return;
+
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  master = audioCtx.createGain();
+  master.gain.value = 0.22;
+  master.connect(audioCtx.destination);
+}
+
+function stopBgmSynth() {
+  if (clockTimer) {
+    clearInterval(clockTimer);
+    clockTimer = null;
+  }
+  step = 0;
   log("BGM 정지", "info");
 }
 
-function toggleMute() {
-  el.bgm.muted = !el.bgm.muted;
-  log(`음소거: ${el.bgm.muted ? "ON" : "OFF"}`, "info");
+function playNote(freq, durMs = 120) {
+  if (!audioCtx || !master) return;
+
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  const filter = audioCtx.createBiquadFilter();
+
+  osc.type = "sawtooth";
+  osc.frequency.value = freq;
+
+  filter.type = "lowpass";
+  filter.frequency.value = 1200;
+  filter.Q.value = 0.8;
+
+  // ADSR 느낌
+  const t = audioCtx.currentTime;
+  const dur = durMs / 1000;
+
+  gain.gain.setValueAtTime(0.0001, t);
+  gain.gain.exponentialRampToValueAtTime(0.12, t + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+
+  osc.connect(filter);
+  filter.connect(gain);
+  gain.connect(master);
+
+  osc.start(t);
+  osc.stop(t + dur + 0.02);
 }
 
-async function forceStartBgm() {
+function startBgmSynth() {
   if (!bgmEnabled) return;
-  el.bgm.muted = false;
-  try {
-    await el.bgm.play();
-    log("BGM 재생 시작(사용자 상호작용)", "ok");
-    el.gate.classList.add("hidden");
-  } catch {
-    log("BGM 재생 실패(오디오 URL 문제/정책)", "bad");
-  }
+
+  ensureAudio();
+
+  if (audioCtx.state === "suspended") audioCtx.resume();
+
+  if (clockTimer) return; // already playing
+
+  // 간단한 레트로 아르페지오 (C minor-ish)
+  const scale = [261.63, 311.13, 392.0, 466.16, 523.25, 622.25]; // C, Eb, G, Bb, C, Eb (Hz)
+  const bass = [130.81, 155.56, 196.0, 233.08]; // C, Eb, G, Bb (한 옥타브 아래)
+
+  const bpm = 120;
+  const intervalMs = (60_000 / bpm) / 2; // 8th note
+
+  log("BGM 재생 시작(WebAudio)", "ok");
+  el.gate.classList.add("hidden");
+
+  // mute 적용
+  setMuteState(isMuted);
+
+  clockTimer = setInterval(() => {
+    if (!audioCtx) return;
+
+    // 베이스: 4스텝마다
+    if (step % 4 === 0) {
+      const b = bass[(step / 4) % bass.length];
+      playNote(b, 220);
+    }
+
+    // 리드: 매 스텝
+    const n = scale[step % scale.length];
+    // 약간의 변주
+    const octave = (step % 8 < 4) ? 1 : 2;
+    playNote(n * octave, 110);
+
+    step++;
+  }, intervalMs);
+}
+
+// autoplay 정책 대응: 사용자 상호작용 시 시작
+function showGate() {
+  el.gate.classList.remove("hidden");
+}
+
+function tryAutoStartBgm() {
+  if (!bgmEnabled) return;
+
+  // WebAudio는 대부분 "사용자 제스처" 필요 → 게이트 띄움
+  showGate();
 }
 
 function bindAutoplayUnlock() {
   const unlock = async () => {
     if (!bgmEnabled) return;
-    el.bgm.muted = false;
     try {
-      await el.bgm.play();
-      el.gate.classList.add("hidden");
-      log("사용자 상호작용으로 BGM 재생 확정", "ok");
+      startBgmSynth();
     } catch {}
   };
 
@@ -167,9 +222,9 @@ function bindAutoplayUnlock() {
   window.addEventListener("keydown", unlock, { once: true });
 }
 
-// ============================
+// =======================================================
 // Browser Download (direct file URL)
-// ============================
+// =======================================================
 async function headCheck(url) {
   try {
     const res = await fetch(url, { method: "HEAD" });
@@ -263,9 +318,9 @@ function triggerSave(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
-// ============================
+// =======================================================
 // yt-dlp command builder
-// ============================
+// =======================================================
 function buildYtDlpCommand(url, mode, outDir) {
   const safeUrl = url?.trim() ? `"${url.trim()}"` : `"https://example.com/..."`;
   const dir = outDir?.trim() ? outDir.trim() : "";
@@ -277,14 +332,12 @@ function buildYtDlpCommand(url, mode, outDir) {
       `yt-dlp -x --audio-format mp3 -o ${outTpl} ${safeUrl}`
     ].join("\n");
   }
-
   if (mode === "video") {
     return [
       "pip install -U yt-dlp",
       `yt-dlp -f "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/best" -o ${outTpl} ${safeUrl}`
     ].join("\n");
   }
-
   return [
     "pip install -U yt-dlp",
     `yt-dlp -f "bv*+ba/best" -o ${outTpl} ${safeUrl}`
@@ -298,32 +351,36 @@ function refreshCmd() {
   el.cmdBox.textContent = buildYtDlpCommand(url, mode, outDir);
 }
 
-// ============================
+// =======================================================
 // Init
-// ============================
+// =======================================================
 function init() {
-  el.bgm.src = BACKGROUND_MUSIC_URL;
-
   updateBgmChip();
   log("페이지 로드됨", "info");
+  log("BGM: 외부 mp3 없이 WebAudio로 생성(403/CORS 없음)", "ok");
   log("브라우저 다운로드는 '직접 파일 URL'에서 가장 잘 동작함", "warn");
 
-  tryPlayBgm();
+  tryAutoStartBgm();
   bindAutoplayUnlock();
 
   refreshCmd();
 
-  el.btnStartBgm.addEventListener("click", forceStartBgm);
-  el.btnMuteToggle.addEventListener("click", toggleMute);
+  el.btnStartBgm.addEventListener("click", () => {
+    startBgmSynth();
+  });
 
-  el.btnBgmToggle.addEventListener("click", async () => {
+  el.btnMuteToggle.addEventListener("click", () => {
+    setMuteState(!isMuted);
+  });
+
+  el.btnBgmToggle.addEventListener("click", () => {
     bgmEnabled = !bgmEnabled;
     updateBgmChip();
     if (!bgmEnabled) {
-      stopBgm();
+      stopBgmSynth();
       el.gate.classList.add("hidden");
     } else {
-      await tryPlayBgm();
+      tryAutoStartBgm();
       bindAutoplayUnlock();
     }
   });

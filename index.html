@@ -8,15 +8,12 @@
   <!-- favicon 404 방지 -->
   <link rel="icon" href="data:,">
 
-  <!-- CSS (반드시 style.css 파일명 그대로) -->
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
-  <!-- Background FX -->
   <div class="bg-grid"></div>
   <div class="vignette"></div>
 
-  <!-- Autoplay helper overlay (브라우저 정책 때문에 첫 상호작용 필요) -->
   <div id="autoplayGate" class="gate hidden">
     <div class="gate-card">
       <div class="gate-title">🔊 음악 재생</div>
@@ -35,7 +32,7 @@
       <div class="logo">⬇️</div>
       <div>
         <div class="brand-title">Media Downloader</div>
-        <div class="brand-sub">브라우저 다운로드 + Python(yt-dlp) 명령어 생성 + BGM</div>
+        <div class="brand-sub">브라우저 다운로드 + Python(yt-dlp) 명령어 생성 + (WebAudio) BGM</div>
       </div>
     </div>
 
@@ -117,18 +114,6 @@
         <button id="btnCopyCmd" class="btn primary">명령어 복사</button>
         <button id="btnExplain" class="btn">주의/설명</button>
       </div>
-
-      <details class="details">
-        <summary>Windows / macOS / Linux 실행 예시</summary>
-        <div class="muted">
-          Windows PowerShell 예시:
-          <pre class="code"><code>pip install -U yt-dlp
-yt-dlp "https://URL"</code></pre>
-          macOS/Linux 예시:
-          <pre class="code"><code>python3 -m pip install -U yt-dlp
-yt-dlp "https://URL"</code></pre>
-        </div>
-      </details>
     </section>
 
     <section class="card">
@@ -136,9 +121,6 @@ yt-dlp "https://URL"</code></pre>
       <div id="log" class="log"></div>
     </section>
   </main>
-
-  <!-- Background Music -->
-  <audio id="bgm" preload="auto" loop></audio>
 
   <script src="./app.js"></script>
 </body>
