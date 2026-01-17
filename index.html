@@ -1,36 +1,140 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BGM Downloader</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Media Downloader + BGM</title>
+  <link rel="stylesheet" href="./style.scc" />
 </head>
 <body>
-    <div class="card">
-        <h1>🌿 BGM Studio</h1>
-        <p>영상 링크를 MP3로 변환해 드립니다</p>
-        
-        <form action="/download" method="post" onsubmit="showLoading()">
-            <input type="text" name="url" placeholder="유튜브 링크를 붙여넣으세요" required>
-            <button type="submit">지금 다운로드</button>
-        </form>
+  <!-- Background FX -->
+  <div class="bg-grid"></div>
+  <div class="vignette"></div>
 
-        <div id="loading" class="loading-text">곡을 추출하고 있습니다. 잠시만요... ✨</div>
+  <!-- Autoplay helper overlay (because browsers require user gesture) -->
+  <div id="autoplayGate" class="gate hidden">
+    <div class="gate-card">
+      <div class="gate-title">🔊 음악 재생</div>
+      <p class="gate-desc">
+        브라우저 정책 때문에 첫 상호작용이 필요해.<br/>
+        아래 버튼을 눌러서 BGM을 시작할 수 있어.
+      </p>
+      <button id="btnStartBgm" class="btn primary">음악 시작</button>
+      <button id="btnMuteToggle" class="btn ghost">음소거</button>
+      <div class="gate-hint">Tip: 아무 곳이나 클릭/키 입력해도 자동으로 재생 시도함</div>
+    </div>
+  </div>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">⬇️</div>
+      <div>
+        <div class="brand-title">Media Downloader</div>
+        <div class="brand-sub">브라우저 다운로드 + Python(yt-dlp) 명령어 생성 + BGM</div>
+      </div>
     </div>
 
-    <audio id="bgm" loop src="bgm.mp3"></audio>
+    <div class="controls">
+      <button id="btnBgmToggle" class="chip">BGM: ON</button>
+      <button id="btnCopyLog" class="chip">로그 복사</button>
+    </div>
+  </header>
 
-    <script>
-        // 사용자가 화면을 클릭하는 순간 BGM 재생 시작 (브라우저 정책 대응)
-        document.body.addEventListener('click', () => {
-            const audio = document.getElementById('bgm');
-            if(audio.paused) audio.play();
-        }, { once: true });
+  <main class="wrap">
+    <section class="card">
+      <h2>1) 브라우저로 파일 다운로드 (직접 파일 URL)</h2>
+      <p class="muted">
+        mp3/mp4/webm/wav 같은 “직접 파일 링크”를 넣으면 브라우저가 받아서 저장해줘.<br/>
+        유튜브/트위치 같은 서비스 URL은 보통 브라우저에서 바로 다운로드가 막혀있어(정책/CORS).
+      </p>
 
-        function showLoading() {
-            document.getElementById('loading').style.display = 'block';
-        }
-    </script>
+      <div class="grid2">
+        <div class="field">
+          <label>미디어 URL</label>
+          <input id="inputUrl" type="url" placeholder="https://example.com/video.mp4" spellcheck="false" />
+          <div class="mini muted">가능하면 CDN/직접 파일 주소를 넣어줘.</div>
+        </div>
+
+        <div class="field">
+          <label>저장 파일명(선택)</label>
+          <input id="inputFilename" type="text" placeholder="my_media" spellcheck="false" />
+          <div class="mini muted">비워두면 URL에서 자동 추출.</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <button id="btnDownload" class="btn primary">다운로드 시작</button>
+        <button id="btnHeadCheck" class="btn">URL 검사(가능하면)</button>
+        <button id="btnClear" class="btn ghost">초기화</button>
+      </div>
+
+      <div class="progress">
+        <div class="progress-bar">
+          <div id="progressFill" class="progress-fill" style="width:0%"></div>
+        </div>
+        <div class="progress-meta">
+          <span id="progressText" class="muted">대기 중</span>
+          <span id="sizeText" class="muted"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>2) 파이썬(yt-dlp) 다운로드 명령어 자동 생성</h2>
+      <p class="muted">
+        아래 명령어는 네 PC에서 실행하는 방식이야. (유튜브/각종 사이트는 보통 이 방법이 안정적)<br/>
+        먼저: <code>pip install -U yt-dlp</code>
+      </p>
+
+      <div class="grid2">
+        <div class="field">
+          <label>모드</label>
+          <select id="selectMode">
+            <option value="best">비디오+오디오 (최고화질)</option>
+            <option value="audio">오디오만 (mp3)</option>
+            <option value="video">비디오만 (mp4)</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>저장 폴더(선택)</label>
+          <input id="inputOutDir" type="text" placeholder="downloads" spellcheck="false" />
+          <div class="mini muted">비우면 현재 폴더에 저장.</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>생성된 명령어</label>
+        <pre class="code"><code id="cmdBox">URL을 입력하면 자동으로 생성돼</code></pre>
+      </div>
+
+      <div class="row">
+        <button id="btnCopyCmd" class="btn primary">명령어 복사</button>
+        <button id="btnExplain" class="btn">설명 보기</button>
+      </div>
+
+      <details class="details">
+        <summary>Windows / macOS / Linux 실행 예시</summary>
+        <div class="muted">
+          Windows PowerShell 예시:
+          <pre class="code"><code>pip install -U yt-dlp
+yt-dlp "https://URL"</code></pre>
+          macOS/Linux 예시:
+          <pre class="code"><code>python3 -m pip install -U yt-dlp
+yt-dlp "https://URL"</code></pre>
+        </div>
+      </details>
+    </section>
+
+    <section class="card">
+      <h2>3) 로그</h2>
+      <div id="log" class="log"></div>
+    </section>
+  </main>
+
+  <!-- Background Music -->
+  <audio id="bgm" preload="auto" loop></audio>
+
+  <script src="./app.js"></script>
 </body>
 </html>
