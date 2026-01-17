@@ -149,6 +149,18 @@ input:focus, select:focus{
   box-shadow: 0 0 0 6px rgba(121,255,240,0.08);
 }
 
+.status{
+  width:100%;
+  padding: 12px 12px;
+  border-radius: 14px;
+  border:1px solid rgba(255,255,255,0.14);
+  background: rgba(0,0,0,0.28);
+  color: var(--text);
+}
+.status.ok{ border-color: rgba(112,255,180,0.55); }
+.status.warn{ border-color: rgba(255,196,85,0.55); }
+.status.bad{ border-color: rgba(255,94,120,0.55); }
+
 .row{
   display:flex;
   gap:10px;

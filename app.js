@@ -7,6 +7,12 @@ const el = {
   btnBgmToggle: $("btnBgmToggle"),
   btnCopyLog: $("btnCopyLog"),
 
+  inputBgmUrl: $("inputBgmUrl"),
+  bgmStatus: $("bgmStatus"),
+  btnApplyBgm: $("btnApplyBgm"),
+  btnTestBgm: $("btnTestBgm"),
+  btnClearBgm: $("btnClearBgm"),
+
   inputUrl: $("inputUrl"),
   inputFilename: $("inputFilename"),
   btnDownload: $("btnDownload"),
@@ -24,7 +30,10 @@ const el = {
   btnExplain: $("btnExplain"),
 
   log: $("log"),
+  bgm: $("bgm"),
 };
+
+const LS_BGM_KEY = "bgm_url_v1";
 
 function now() {
   const d = new Date();
@@ -40,6 +49,11 @@ function log(msg, type = "info") {
   div.textContent = `[${now()}] ${msg}`;
   el.log.appendChild(div);
   el.log.scrollTop = el.log.scrollHeight;
+}
+
+function setStatus(text, kind = "info") {
+  el.bgmStatus.textContent = text;
+  el.bgmStatus.className = `status ${kind}`;
 }
 
 function setProgress(pct, text, sizeText = "") {
@@ -87,139 +101,130 @@ async function copyToClipboard(text) {
 }
 
 // =======================================================
-// ✅ WebAudio BGM (외부 mp3 없음 → 403/CORS 없음)
+// BGM (LINK BASED)
 // =======================================================
 let bgmEnabled = true;
-let isMuted = false;
-
-let audioCtx = null;
-let master = null;
-let clockTimer = null;
-let step = 0;
 
 function updateBgmChip() {
   el.btnBgmToggle.textContent = `BGM: ${bgmEnabled ? "ON" : "OFF"}`;
   el.btnBgmToggle.classList.toggle("off", !bgmEnabled);
 }
 
-function setMuteState(mute) {
-  isMuted = !!mute;
-  if (master) master.gain.value = isMuted ? 0 : 0.22;
-  log(`음소거: ${isMuted ? "ON" : "OFF"}`, "info");
-}
-
-function ensureAudio() {
-  if (audioCtx) return;
-
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-  master = audioCtx.createGain();
-  master.gain.value = 0.22;
-  master.connect(audioCtx.destination);
-}
-
-function stopBgmSynth() {
-  if (clockTimer) {
-    clearInterval(clockTimer);
-    clockTimer = null;
-  }
-  step = 0;
+function stopBgm() {
+  try {
+    el.bgm.pause();
+    el.bgm.currentTime = 0;
+  } catch {}
   log("BGM 정지", "info");
 }
 
-function playNote(freq, durMs = 120) {
-  if (!audioCtx || !master) return;
-
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  const filter = audioCtx.createBiquadFilter();
-
-  osc.type = "sawtooth";
-  osc.frequency.value = freq;
-
-  filter.type = "lowpass";
-  filter.frequency.value = 1200;
-  filter.Q.value = 0.8;
-
-  // ADSR 느낌
-  const t = audioCtx.currentTime;
-  const dur = durMs / 1000;
-
-  gain.gain.setValueAtTime(0.0001, t);
-  gain.gain.exponentialRampToValueAtTime(0.12, t + 0.01);
-  gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-
-  osc.connect(filter);
-  filter.connect(gain);
-  gain.connect(master);
-
-  osc.start(t);
-  osc.stop(t + dur + 0.02);
-}
-
-function startBgmSynth() {
+async function tryPlayBgm() {
   if (!bgmEnabled) return;
 
-  ensureAudio();
+  // src가 없으면 게이트 띄우고 안내
+  if (!el.bgm.src) {
+    setStatus("BGM 링크가 없음", "warn");
+    el.gate.classList.remove("hidden");
+    return;
+  }
 
-  if (audioCtx.state === "suspended") audioCtx.resume();
+  // autoplay 정책 때문에 실패하면 게이트 노출
+  try {
+    await el.bgm.play();
+    el.gate.classList.add("hidden");
+    setStatus("재생 중", "ok");
+    log("BGM 재생 시작", "ok");
+  } catch {
+    setStatus("자동 재생 차단(클릭 필요)", "warn");
+    el.gate.classList.remove("hidden");
+    log("BGM 자동재생이 차단됨 — 버튼/클릭으로 시작해줘", "warn");
+  }
+}
 
-  if (clockTimer) return; // already playing
+async function forceStartBgm() {
+  if (!bgmEnabled) return;
 
-  // 간단한 레트로 아르페지오 (C minor-ish)
-  const scale = [261.63, 311.13, 392.0, 466.16, 523.25, 622.25]; // C, Eb, G, Bb, C, Eb (Hz)
-  const bass = [130.81, 155.56, 196.0, 233.08]; // C, Eb, G, Bb (한 옥타브 아래)
+  if (!el.bgm.src) {
+    setStatus("BGM 링크가 없음", "warn");
+    log("BGM URL을 먼저 넣어줘", "warn");
+    return;
+  }
 
-  const bpm = 120;
-  const intervalMs = (60_000 / bpm) / 2; // 8th note
+  try {
+    await el.bgm.play();
+    el.gate.classList.add("hidden");
+    setStatus("재생 중", "ok");
+    log("BGM 재생 시작(사용자 상호작용)", "ok");
+  } catch (e) {
+    // 여기서 실패하면 대부분 403/CORS/포맷 문제
+    setStatus("재생 실패(403/CORS/포맷)", "bad");
+    log("BGM 재생 실패: 링크가 403/CORS로 막혔거나 오디오 포맷 문제일 수 있어", "bad");
+  }
+}
 
-  log("BGM 재생 시작(WebAudio)", "ok");
-  el.gate.classList.add("hidden");
+function toggleMute() {
+  el.bgm.muted = !el.bgm.muted;
+  log(`음소거: ${el.bgm.muted ? "ON" : "OFF"}`, "info");
+}
 
-  // mute 적용
-  setMuteState(isMuted);
+function saveBgmUrl(url) {
+  localStorage.setItem(LS_BGM_KEY, url);
+}
 
-  clockTimer = setInterval(() => {
-    if (!audioCtx) return;
+function loadBgmUrl() {
+  return localStorage.getItem(LS_BGM_KEY) || "";
+}
 
-    // 베이스: 4스텝마다
-    if (step % 4 === 0) {
-      const b = bass[(step / 4) % bass.length];
-      playNote(b, 220);
+function setBgmUrl(url) {
+  const u = (url || "").trim();
+  el.bgm.src = u;
+  el.bgm.load();
+
+  if (u) {
+    saveBgmUrl(u);
+    setStatus("링크 적용됨(재생 시도 중...)", "info");
+    log(`BGM 링크 적용: ${u}`, "info");
+  } else {
+    localStorage.removeItem(LS_BGM_KEY);
+    setStatus("BGM 링크 없음", "warn");
+    log("BGM 링크 초기화", "info");
+  }
+}
+
+async function testBgmUrl(url) {
+  const u = (url || "").trim();
+  if (!u) {
+    setStatus("테스트할 링크가 없음", "warn");
+    return;
+  }
+
+  // HEAD로 테스트(가능할 때만). CORS 때문에 여기서 실패해도 실제 재생은 될 수 있음.
+  try {
+    const res = await fetch(u, { method: "HEAD" });
+    if (!res.ok) {
+      setStatus(`HEAD 실패: HTTP ${res.status}`, "warn");
+      log(`BGM 링크 HEAD 실패: HTTP ${res.status} (재생도 막힐 가능성 큼)`, "warn");
+      return;
     }
-
-    // 리드: 매 스텝
-    const n = scale[step % scale.length];
-    // 약간의 변주
-    const octave = (step % 8 < 4) ? 1 : 2;
-    playNote(n * octave, 110);
-
-    step++;
-  }, intervalMs);
+    const ct = res.headers.get("content-type") || "";
+    setStatus(`HEAD OK (${ct || "content-type 없음"})`, "ok");
+    log(`BGM 링크 HEAD OK | type=${ct || "unknown"}`, "ok");
+  } catch {
+    setStatus("HEAD 테스트 불가(CORS) — 재생으로 확인", "warn");
+    log("BGM 링크 HEAD 테스트 실패(CORS). 재생 시도로 확인해야 함", "warn");
+  }
 }
 
-// autoplay 정책 대응: 사용자 상호작용 시 시작
-function showGate() {
-  el.gate.classList.remove("hidden");
-}
-
-function tryAutoStartBgm() {
-  if (!bgmEnabled) return;
-
-  // WebAudio는 대부분 "사용자 제스처" 필요 → 게이트 띄움
-  showGate();
-}
-
-function bindAutoplayUnlock() {
-  const unlock = async () => {
-    if (!bgmEnabled) return;
-    try {
-      startBgmSynth();
-    } catch {}
-  };
-
-  window.addEventListener("pointerdown", unlock, { once: true });
-  window.addEventListener("keydown", unlock, { once: true });
+// 오디오 이벤트로 403/에러 감지
+function bindBgmEvents() {
+  el.bgm.addEventListener("playing", () => setStatus("재생 중", "ok"));
+  el.bgm.addEventListener("pause", () => {
+    if (bgmEnabled) setStatus("일시정지", "warn");
+  });
+  el.bgm.addEventListener("error", () => {
+    setStatus("로드 실패(403/CORS/링크 문제)", "bad");
+    log("BGM 로드 실패: 403(Forbidden) 또는 CORS/핫링크 차단 가능성이 큼", "bad");
+  });
 }
 
 // =======================================================
@@ -356,35 +361,67 @@ function refreshCmd() {
 // =======================================================
 function init() {
   updateBgmChip();
+  bindBgmEvents();
+
   log("페이지 로드됨", "info");
-  log("BGM: 외부 mp3 없이 WebAudio로 생성(403/CORS 없음)", "ok");
-  log("브라우저 다운로드는 '직접 파일 URL'에서 가장 잘 동작함", "warn");
+  log("BGM은 링크 기반. 링크가 403/CORS로 막히면 재생 불가", "warn");
 
-  tryAutoStartBgm();
-  bindAutoplayUnlock();
+  // load saved BGM url
+  const saved = loadBgmUrl();
+  if (saved) {
+    el.inputBgmUrl.value = saved;
+    setBgmUrl(saved);
+    setStatus("저장된 링크 로드됨(재생 시도는 클릭 필요할 수 있음)", "info");
+  } else {
+    setStatus("BGM 링크 없음", "warn");
+  }
 
-  refreshCmd();
+  // autoplay 정책 대응: 들어오면 재생 시도 -> 막히면 gate 표시
+  tryPlayBgm();
 
-  el.btnStartBgm.addEventListener("click", () => {
-    startBgmSynth();
-  });
+  // 사용자 상호작용 발생하면 자동 재시도
+  const unlock = () => {
+    if (bgmEnabled) forceStartBgm();
+  };
+  window.addEventListener("pointerdown", unlock, { once: true });
+  window.addEventListener("keydown", unlock, { once: true });
 
-  el.btnMuteToggle.addEventListener("click", () => {
-    setMuteState(!isMuted);
-  });
+  // BGM UI
+  el.btnStartBgm.addEventListener("click", forceStartBgm);
+  el.btnMuteToggle.addEventListener("click", toggleMute);
 
   el.btnBgmToggle.addEventListener("click", () => {
     bgmEnabled = !bgmEnabled;
     updateBgmChip();
     if (!bgmEnabled) {
-      stopBgmSynth();
+      stopBgm();
       el.gate.classList.add("hidden");
+      setStatus("BGM OFF", "warn");
     } else {
-      tryAutoStartBgm();
-      bindAutoplayUnlock();
+      setStatus("BGM ON", "info");
+      tryPlayBgm();
     }
   });
 
+  el.btnApplyBgm.addEventListener("click", () => {
+    const url = el.inputBgmUrl.value.trim();
+    setBgmUrl(url);
+    // 적용하면 바로 재생은 시도 (막히면 gate)
+    tryPlayBgm();
+  });
+
+  el.btnTestBgm.addEventListener("click", async () => {
+    await testBgmUrl(el.inputBgmUrl.value);
+  });
+
+  el.btnClearBgm.addEventListener("click", () => {
+    el.inputBgmUrl.value = "";
+    setBgmUrl("");
+    stopBgm();
+    el.gate.classList.add("hidden");
+  });
+
+  // log copy
   el.btnCopyLog.addEventListener("click", async () => {
     const lines = [...el.log.querySelectorAll(".logline")]
       .map((x) => x.textContent)
@@ -392,6 +429,8 @@ function init() {
     await copyToClipboard(lines || "(로그 없음)");
   });
 
+  // cmd
+  refreshCmd();
   el.inputUrl.addEventListener("input", refreshCmd);
   el.selectMode.addEventListener("change", refreshCmd);
   el.inputOutDir.addEventListener("input", refreshCmd);
@@ -404,6 +443,7 @@ function init() {
     log("yt-dlp는 사이트 정책이 허용하는 범위 내에서 사용해야 해. 권한 있는 콘텐츠만 다운로드해줘.", "warn");
   });
 
+  // downloader
   el.btnClear.addEventListener("click", () => {
     el.inputUrl.value = "";
     el.inputFilename.value = "";
