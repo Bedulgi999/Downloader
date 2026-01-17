@@ -6,7 +6,7 @@
 // - 같은 폴더에 bgm.mp3를 넣고 싶다면: "./bgm.mp3" 로 바꾸면 됨
 // - 단, 이번 요청은 "파일 3개만"이라서 기본값은 외부 샘플 URL로 넣어둠
 const BACKGROUND_MUSIC_URL =
-  "https://cdn.pixabay.com/download/audio/2022/03/15/audio_2f6a3ab8f9.mp3?filename=future-bass-beat-117997.mp3";
+  "https://youtu.be/wDqArJu1Rbs?si=_Te8hnzSL2Sc6Zw1";
 
 // 다운로드를 "브라우저로 직접" 할 때, CORS 때문에 실패하는 URL이 많음.
 // 가능한 "직접 파일 URL"로 쓰는 걸 권장.
@@ -414,3 +414,4 @@ function init() {
 }
 
 document.addEventListener("DOMContentLoaded", init);
+
