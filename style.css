@@ -19,11 +19,8 @@ body{
   overflow-x:hidden;
 }
 
-/* ✅ 배경 레이어는 클릭을 절대 먹지 않도록 */
 .bg-grid,
-.vignette{
-  pointer-events:none;
-}
+.vignette{ pointer-events:none; }
 
 .bg-grid{
   position:fixed; inset:0;
@@ -40,7 +37,6 @@ body{
   background: radial-gradient(circle at 50% 30%, transparent 35%, rgba(0,0,0,0.65) 80%);
 }
 
-/* Topbar */
 .topbar{
   position:sticky; top:0; z-index:5;
   display:flex;
@@ -81,10 +77,9 @@ body{
   border-color: rgba(121,255,240,0.35);
   box-shadow: 0 0 0 6px rgba(121,255,240,0.06);
 }
-.chip.off{ opacity:0.75; }
 
 .wrap{
-  max-width: 1100px;
+  max-width: 980px;
   margin: 0 auto;
   padding: 22px 18px 80px;
   display:flex;
@@ -115,6 +110,28 @@ p{ margin:8px 0; }
 .muted{ color:var(--muted); }
 .mini{ font-size:12px; margin-top:6px; }
 
+.field{ position:relative; z-index:1; margin-top: 12px; }
+label{
+  display:block;
+  font-size:12px;
+  color:var(--muted);
+  margin-bottom:8px;
+}
+input{
+  width:100%;
+  padding: 12px 12px;
+  border-radius: 14px;
+  border:1px solid rgba(255,255,255,0.14);
+  background: rgba(0,0,0,0.28);
+  color: var(--text);
+  outline:none;
+  transition: 160ms ease;
+}
+input:focus{
+  border-color: rgba(121,255,240,0.40);
+  box-shadow: 0 0 0 6px rgba(121,255,240,0.08);
+}
+
 .grid2{
   display:grid;
   grid-template-columns: 1fr 1fr;
@@ -125,40 +142,6 @@ p{ margin:8px 0; }
   .grid2{ grid-template-columns: 1fr; }
 }
 
-.field{ position:relative; z-index:1; }
-label{
-  display:block;
-  font-size:12px;
-  color:var(--muted);
-  margin-bottom:8px;
-}
-input, select{
-  width:100%;
-  padding: 12px 12px;
-  border-radius: 14px;
-  border:1px solid rgba(255,255,255,0.14);
-  background: rgba(0,0,0,0.28);
-  color: var(--text);
-  outline:none;
-  transition: 160ms ease;
-}
-input:focus, select:focus{
-  border-color: rgba(121,255,240,0.40);
-  box-shadow: 0 0 0 6px rgba(121,255,240,0.08);
-}
-
-.status{
-  width:100%;
-  padding: 12px 12px;
-  border-radius: 14px;
-  border:1px solid rgba(255,255,255,0.14);
-  background: rgba(0,0,0,0.28);
-  color: var(--text);
-}
-.status.ok{ border-color: rgba(112,255,180,0.55); }
-.status.warn{ border-color: rgba(255,196,85,0.55); }
-.status.bad{ border-color: rgba(255,94,120,0.55); }
-
 .row{
   display:flex;
   gap:10px;
@@ -166,6 +149,7 @@ input:focus, select:focus{
   margin-top: 12px;
   position:relative; z-index:1;
 }
+.row.tight{ margin-top: 0; }
 
 .btn{
   padding: 11px 14px;
@@ -222,25 +206,6 @@ input:focus, select:focus{
   font-size: 12px;
 }
 
-.code{
-  margin: 10px 0 0;
-  border-radius: 16px;
-  border:1px solid rgba(255,255,255,0.12);
-  background: rgba(0,0,0,0.38);
-  padding: 12px;
-  overflow:auto;
-  font-family: var(--mono);
-  font-size: 12.5px;
-  line-height: 1.45;
-}
-
-.details{ margin-top: 10px; position:relative; z-index:1; }
-details summary{
-  cursor:pointer;
-  color: rgba(121,255,240,0.9);
-  user-select:none;
-}
-
 .log{
   margin-top: 10px;
   border-radius: 16px;
@@ -258,31 +223,3 @@ details summary{
 .logline.ok{ color: rgba(112,255,180,0.95); }
 .logline.warn{ color: rgba(255,196,85,0.95); }
 .logline.bad{ color: rgba(255,94,120,0.95); }
-
-/* ✅ Gate는 무조건 최상위 + 클릭 가능 */
-.gate{
-  position:fixed;
-  inset:0;
-  display:grid;
-  place-items:center;
-  background: rgba(0,0,0,0.55);
-  backdrop-filter: blur(8px);
-  z-index: 9999;        /* ⭐ 기존 20 같은 값 말고 확실히 최상위 */
-  pointer-events: auto; /* ⭐ 클릭 허용 */
-  padding: 18px;
-}
-.gate.hidden{ display:none; }
-
-.gate-card{
-  width:min(520px, 100%);
-  border-radius: 22px;
-  padding: 18px 18px 16px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.06));
-  border:1px solid rgba(255,255,255,0.14);
-  box-shadow: var(--shadow);
-  pointer-events:auto; /* ⭐ 카드/버튼 클릭 허용 */
-}
-
-.gate-title{ font-weight:900; font-size:18px; margin-bottom:6px; }
-.gate-desc{ margin: 0 0 12px; color: var(--muted); }
-.gate-hint{ margin-top: 10px; font-size: 12px; color: rgba(255,255,255,0.55); }

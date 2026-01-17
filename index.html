@@ -3,113 +3,63 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Downloader + Link BGM</title>
+  <title>MP3/MP4 Downloader</title>
 
-  <!-- favicon 404 방지 -->
   <link rel="icon" href="data:,">
-
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
-  <!-- Background FX -->
   <div class="bg-grid"></div>
   <div class="vignette"></div>
-
-  <!-- Autoplay helper overlay -->
-  <div id="autoplayGate" class="gate hidden">
-    <div class="gate-card">
-      <div class="gate-title">🔊 음악 재생</div>
-      <p class="gate-desc">
-        브라우저 정책 때문에 첫 상호작용이 필요해.<br/>
-        아래 버튼을 눌러서 BGM을 시작할 수 있어.
-      </p>
-
-      <div class="row">
-        <button id="btnStartBgm" class="btn primary">음악 시작</button>
-        <button id="btnMuteToggle" class="btn ghost">음소거</button>
-      </div>
-
-      <div class="gate-hint">Tip: 아무 곳이나 클릭/키 입력해도 자동으로 재생 시도함</div>
-    </div>
-  </div>
 
   <header class="topbar">
     <div class="brand">
       <div class="logo">⬇️</div>
       <div>
-        <div class="brand-title">Downloader</div>
-        <div class="brand-sub">브라우저 다운로드 + yt-dlp 명령어 + 링크 BGM</div>
+        <div class="brand-title">MP3/MP4 Downloader</div>
+        <div class="brand-sub">직접 파일 링크(mp3/mp4/webm/wav 등) 다운로드</div>
       </div>
     </div>
 
     <div class="controls">
-      <button id="btnBgmToggle" class="chip">BGM: ON</button>
       <button id="btnCopyLog" class="chip">로그 복사</button>
     </div>
   </header>
 
   <main class="wrap">
     <section class="card">
-      <h2>0) BGM 링크 설정</h2>
+      <h2>다운로드</h2>
       <p class="muted">
-        mp3/ogg/wav 같은 오디오 “직접 링크”를 넣어줘. (403/CORS 차단된 링크는 재생이 안 됨)<br/>
-        링크는 저장돼서 다음에 들어와도 자동으로 재생 시도해.
+        “직접 파일 URL”을 넣으면 브라우저가 파일을 받아서 저장해줘.<br/>
+        예: <code>https://.../video.mp4</code>, <code>https://.../music.mp3</code>
       </p>
 
-      <div class="grid2">
-        <div class="field">
-          <label>BGM URL</label>
-          <input id="inputBgmUrl" type="url" placeholder="https://example.com/bgm.mp3" spellcheck="false" />
-          <div class="mini muted">추천: 본인 S3/R2/서버에 올린 mp3 직링크</div>
-        </div>
-
-        <div class="field">
-          <label>상태</label>
-          <div class="status" id="bgmStatus">대기 중</div>
-          <div class="mini muted">403/CORS면 링크를 바꿔야 함</div>
-        </div>
+      <div class="field">
+        <label>파일 URL</label>
+        <input id="inputUrl" type="url" placeholder="https://example.com/video.mp4" spellcheck="false" />
+        <div class="mini muted">유튜브/사이트 페이지 주소는 보통 안 됨(직접 파일 링크 필요).</div>
       </div>
 
-      <div class="row">
-        <button id="btnApplyBgm" class="btn primary">이 링크로 BGM 적용</button>
-        <button id="btnTestBgm" class="btn">링크 테스트(HEAD)</button>
-        <button id="btnClearBgm" class="btn ghost">BGM 링크 초기화</button>
-      </div>
-
-      <details class="details">
-        <summary>자꾸 403/CORS면?</summary>
-        <div class="muted">
-          링크 제공자가 외부 사이트 재생(핫링크)을 막는 거야.<br/>
-          해결: 네가 소유한 저장소(S3/R2 등)에 업로드하고 CORS/핫링크 허용된 링크를 써야 해.
-        </div>
-      </details>
-    </section>
-
-    <section class="card">
-      <h2>1) 브라우저로 파일 다운로드 (직접 파일 URL)</h2>
-      <p class="muted">
-        mp3/mp4/webm/wav 같은 “직접 파일 링크”를 넣으면 브라우저가 받아서 저장해줘.<br/>
-        유튜브/트위치 같은 서비스 URL은 브라우저에서 직접 다운로드가 막혀 있는 경우가 많아.
-      </p>
-
       <div class="grid2">
-        <div class="field">
-          <label>미디어 URL</label>
-          <input id="inputUrl" type="url" placeholder="https://example.com/video.mp4" spellcheck="false" />
-          <div class="mini muted">가능하면 CDN/직접 파일 주소를 넣어줘.</div>
-        </div>
-
         <div class="field">
           <label>저장 파일명(선택)</label>
-          <input id="inputFilename" type="text" placeholder="my_media" spellcheck="false" />
+          <input id="inputFilename" type="text" placeholder="my_file (확장자 자동추정)" spellcheck="false" />
           <div class="mini muted">비워두면 URL에서 자동 추출.</div>
+        </div>
+
+        <div class="field">
+          <label>옵션</label>
+          <div class="row tight">
+            <button id="btnHeadCheck" class="btn">URL 검사(HEAD)</button>
+            <button id="btnClear" class="btn ghost">초기화</button>
+          </div>
+          <div class="mini muted">서버가 HEAD를 막으면 검사 실패할 수 있음.</div>
         </div>
       </div>
 
       <div class="row">
         <button id="btnDownload" class="btn primary">다운로드 시작</button>
-        <button id="btnHeadCheck" class="btn">URL 검사(HEAD)</button>
-        <button id="btnClear" class="btn ghost">초기화</button>
+        <button id="btnOpen" class="btn">새 탭으로 열기</button>
       </div>
 
       <div class="progress">
@@ -124,48 +74,10 @@
     </section>
 
     <section class="card">
-      <h2>2) 파이썬(yt-dlp) 다운로드 명령어 자동 생성</h2>
-      <p class="muted">
-        아래 명령어는 네 PC에서 실행하는 방식이야.<br/>
-        먼저: <code>pip install -U yt-dlp</code>
-      </p>
-
-      <div class="grid2">
-        <div class="field">
-          <label>모드</label>
-          <select id="selectMode">
-            <option value="best">비디오+오디오 (최고화질)</option>
-            <option value="audio">오디오만 (mp3)</option>
-            <option value="video">비디오만 (mp4)</option>
-          </select>
-        </div>
-
-        <div class="field">
-          <label>저장 폴더(선택)</label>
-          <input id="inputOutDir" type="text" placeholder="downloads" spellcheck="false" />
-          <div class="mini muted">비우면 현재 폴더에 저장.</div>
-        </div>
-      </div>
-
-      <div class="field">
-        <label>생성된 명령어</label>
-        <pre class="code"><code id="cmdBox">URL을 입력하면 자동으로 생성돼</code></pre>
-      </div>
-
-      <div class="row">
-        <button id="btnCopyCmd" class="btn primary">명령어 복사</button>
-        <button id="btnExplain" class="btn">주의/설명</button>
-      </div>
-    </section>
-
-    <section class="card">
-      <h2>3) 로그</h2>
+      <h2>로그</h2>
       <div id="log" class="log"></div>
     </section>
   </main>
-
-  <!-- Link-based BGM player -->
-  <audio id="bgm" preload="auto" loop crossorigin="anonymous"></audio>
 
   <script src="./app.js"></script>
 </body>
