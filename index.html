@@ -3,26 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BGM Studio</title>
+    <title>BGM Downloader</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="glass-container">
-        <h1>🎵 BGM Studio</h1>
-        <p>유튜브 링크를 입력하면 MP3를 추출합니다.</p>
+    <div class="card">
+        <h1>🌿 BGM Studio</h1>
+        <p>영상 링크를 MP3로 변환해 드립니다</p>
         
-        <form action="/download" method="post" id="downloadForm">
-            <input type="text" name="url" placeholder="유튜브 주소를 입력하세요" required>
-            <button type="submit">추출 및 다운로드</button>
+        <form action="/download" method="post" onsubmit="showLoading()">
+            <input type="text" name="url" placeholder="유튜브 링크를 붙여넣으세요" required>
+            <button type="submit">지금 다운로드</button>
         </form>
 
-        <div id="status" style="margin-top: 20px; display: none; color: #00838f;">
-            변환 중입니다... 잠시만 기다려주세요! ⏳
-        </div>
+        <div id="loading" class="loading-text">곡을 추출하고 있습니다. 잠시만요... ✨</div>
     </div>
 
     <audio id="bgm" loop src="bgm.mp3"></audio>
 
-    <script src="script.js"></script>
+    <script>
+        // 사용자가 화면을 클릭하는 순간 BGM 재생 시작 (브라우저 정책 대응)
+        document.body.addEventListener('click', () => {
+            const audio = document.getElementById('bgm');
+            if(audio.paused) audio.play();
+        }, { once: true });
+
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+        }
+    </script>
 </body>
 </html>

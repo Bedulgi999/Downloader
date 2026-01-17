@@ -1,17 +1,62 @@
+* { box-sizing: border-box; }
 body {
-    margin: 0; height: 100vh; display: flex; justify-content: center; align-items: center;
-    background: linear-gradient(135deg, #e0f7fa 0%, #80deea 100%);
-    font-family: sans-serif;
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%);
+    font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
 }
-.glass-container {
-    background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px);
-    padding: 40px; border-radius: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-    text-align: center; width: 350px;
+
+.card {
+    background: rgba(255, 255, 255, 0.9);
+    padding: 50px;
+    border-radius: 30px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    text-align: center;
+    width: 400px;
 }
-h1 { color: #00838f; }
-input { width: 90%; padding: 12px; border: 2px solid #b2ebf2; border-radius: 10px; margin-bottom: 10px; }
+
+h1 { color: #4a90e2; margin-bottom: 10px; }
+p { color: #7f8c8d; font-size: 14px; margin-bottom: 30px; }
+
+input {
+    width: 100%;
+    padding: 15px;
+    border: 2px solid #e1f5fe;
+    border-radius: 12px;
+    outline: none;
+    margin-bottom: 15px;
+    transition: 0.3s;
+}
+
+input:focus { border-color: #4fc3f7; }
+
 button {
-    padding: 12px 25px; background: #4dd0e1; color: white; border: none;
-    border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.3s;
+    width: 100%;
+    padding: 15px;
+    background: #4fc3f7;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
 }
-button:hover { background: #26c6da; transform: translateY(-2px); }
+
+button:hover { background: #29b6f6; transform: translateY(-2px); }
+
+.loading-text {
+    display: none;
+    margin-top: 20px;
+    font-size: 13px;
+    color: #4a90e2;
+    animation: fade 1.5s infinite;
+}
+
+@keyframes fade {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
