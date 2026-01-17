@@ -4,14 +4,19 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Media Downloader + BGM</title>
-  <link rel="stylesheet" href="./style.scc" />
+
+  <!-- favicon 404 방지 -->
+  <link rel="icon" href="data:,">
+
+  <!-- CSS (반드시 style.css 파일명 그대로) -->
+  <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
   <!-- Background FX -->
   <div class="bg-grid"></div>
   <div class="vignette"></div>
 
-  <!-- Autoplay helper overlay (because browsers require user gesture) -->
+  <!-- Autoplay helper overlay (브라우저 정책 때문에 첫 상호작용 필요) -->
   <div id="autoplayGate" class="gate hidden">
     <div class="gate-card">
       <div class="gate-title">🔊 음악 재생</div>
@@ -110,7 +115,7 @@
 
       <div class="row">
         <button id="btnCopyCmd" class="btn primary">명령어 복사</button>
-        <button id="btnExplain" class="btn">설명 보기</button>
+        <button id="btnExplain" class="btn">주의/설명</button>
       </div>
 
       <details class="details">

@@ -1,15 +1,8 @@
 :root{
   --bg:#070912;
   --panel: rgba(255,255,255,0.06);
-  --panel2: rgba(255,255,255,0.10);
-  --stroke: rgba(255,255,255,0.14);
   --text: rgba(255,255,255,0.92);
   --muted: rgba(255,255,255,0.62);
-  --neon: rgba(121, 255, 240, 0.95);
-  --neon2: rgba(170, 120, 255, 0.95);
-  --bad: rgba(255, 94, 120, 0.95);
-  --warn: rgba(255, 196, 85, 0.95);
-  --ok: rgba(112, 255, 180, 0.95);
   --shadow: 0 20px 60px rgba(0,0,0,0.45);
   --radius: 18px;
   --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
@@ -17,6 +10,7 @@
 
 *{ box-sizing:border-box; }
 html,body{ height:100%; }
+
 body{
   margin:0;
   color:var(--text);
@@ -63,17 +57,10 @@ body{
   display:grid; place-items:center;
   background: linear-gradient(135deg, rgba(121,255,240,0.22), rgba(170,120,255,0.22));
   border:1px solid rgba(255,255,255,0.12);
-  box-shadow: 0 0 0 1px rgba(0,0,0,0.2) inset;
 }
 
-.brand-title{
-  font-weight:800;
-  letter-spacing:0.2px;
-}
-.brand-sub{
-  font-size:12px;
-  color:var(--muted);
-}
+.brand-title{ font-weight:800; letter-spacing:0.2px; }
+.brand-sub{ font-size:12px; color:var(--muted); }
 
 .controls{ display:flex; gap:10px; flex-wrap:wrap; }
 
@@ -91,10 +78,7 @@ body{
   border-color: rgba(121,255,240,0.35);
   box-shadow: 0 0 0 6px rgba(121,255,240,0.06);
 }
-.chip.off{
-  border-color: rgba(255,255,255,0.12);
-  opacity:0.75;
-}
+.chip.off{ opacity:0.75; }
 
 .wrap{
   max-width: 1100px;
@@ -202,9 +186,7 @@ input:focus, select:focus{
   border-color: rgba(121,255,240,0.55);
   box-shadow: 0 0 0 6px rgba(121,255,240,0.10);
 }
-.btn.ghost{
-  background: transparent;
-}
+.btn.ghost{ background: transparent; }
 
 .progress{
   margin-top: 14px;
@@ -243,10 +225,7 @@ input:focus, select:focus{
   line-height: 1.45;
 }
 
-.details{
-  margin-top: 10px;
-  position:relative; z-index:1;
-}
+.details{ margin-top: 10px; position:relative; z-index:1; }
 details summary{
   cursor:pointer;
   color: rgba(121,255,240,0.9);
